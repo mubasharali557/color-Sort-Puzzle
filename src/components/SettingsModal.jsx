@@ -1,5 +1,5 @@
 import React from 'react';
-import { Volume2, VolumeX, Music, Smartphone, RotateCcw, X, ShieldAlert } from 'lucide-react';
+import { Volume2, VolumeX, Music, Smartphone, RotateCcw, X, ShieldAlert, LogOut, User } from 'lucide-react';
 import { gameAudio } from '../utils/gameAudio';
 
 export default function SettingsModal({
@@ -12,6 +12,8 @@ export default function SettingsModal({
   vibrationEnabled,
   onToggleVibration,
   onResetProgress,
+  currentUser,
+  onLogout,
 }) {
   if (!isOpen) return null;
 
@@ -92,6 +94,35 @@ export default function SettingsModal({
           </div>
         </div>
 
+        {/* Account Info & Logout */}
+        {currentUser && (
+          <div className="flex flex-col gap-2 pt-2 border-t border-white/10">
+            <div className="flex items-center justify-between px-2 text-xs text-slate-400">
+              <span className="flex items-center gap-1.5 font-bold">
+                <User className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Signed in as:</span>
+              </span>
+              <span className="font-black text-white">{currentUser.username}</span>
+            </div>
+
+            {onLogout && (
+              <button
+                onClick={() => {
+                  gameAudio.playClick();
+                  if (window.confirm(`Log out of account "${currentUser.username}"?`)) {
+                    onClose();
+                    onLogout();
+                  }
+                }}
+                className="w-full py-2.5 px-4 rounded-xl bg-slate-800/90 hover:bg-rose-950/70 border border-slate-700 hover:border-rose-500/50 text-slate-300 hover:text-rose-200 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 shadow-sm"
+              >
+                <LogOut className="w-3.5 h-3.5 text-rose-400" />
+                <span>Log Out</span>
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Reset Game Button */}
         <button
           onClick={() => {
@@ -101,7 +132,7 @@ export default function SettingsModal({
               onClose();
             }
           }}
-          className="w-full py-2.5 px-4 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 font-bold text-xs flex items-center justify-center gap-2 transition-colors"
+          className="w-full py-2.5 px-4 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
         >
           <RotateCcw className="w-3.5 h-3.5" />
           <span>Reset Progress to Stage 1</span>

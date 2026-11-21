@@ -4,6 +4,7 @@ import MagicParticles from './components/MagicParticles';
 import GameNavbar from './components/GameNavbar';
 import HomeScreen from './components/HomeScreen';
 import PixiGameBoard from './components/PixiGameBoard';
+import LoginScreen from './components/LoginScreen';
 import PauseModal from './components/PauseModal';
 import WinModal from './components/WinModal';
 import SettingsModal from './components/SettingsModal';
@@ -15,67 +16,43 @@ import OutOfChancesModal from './components/OutOfChancesModal';
 import { getStageData } from './data/levelStages';
 import { GAME_THEMES, TUBE_SKINS } from './data/themes';
 import { gameAudio } from './utils/gameAudio';
+import { authService, createDefaultPlayerProgress } from './utils/authService';
 import { Undo2, RotateCcw, Heart, Pause, Sparkles, Lightbulb, FlaskConical } from 'lucide-react';
 
 export default function App() {
+  // Authentication & Active User Session
+  const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
+  const initialData = currentUser ? authService.getUserProgress(currentUser.id) : null;
+
   const [screen, setScreen] = useState('home'); // 'home' | 'game'
-  const [stage, setStage] = useState(() => {
-    const saved = localStorage.getItem('watersort_stage');
-    return saved ? parseInt(saved, 10) : 1;
-  });
-  const [highestUnlocked, setHighestUnlocked] = useState(() => {
-    const savedHighest = localStorage.getItem('watersort_highest_stage');
-    const savedStage = localStorage.getItem('watersort_stage');
-    return savedHighest ? parseInt(savedHighest, 10) : (savedStage ? parseInt(savedStage, 10) : 1);
-  });
-  const [coins, setCoins] = useState(() => {
-    const saved = localStorage.getItem('watersort_coins');
-    return saved ? parseInt(saved, 10) : 250;
-  });
-  const [stars, setStars] = useState(() => {
-    const saved = localStorage.getItem('watersort_stars');
-    return saved ? parseInt(saved, 10) : 125;
-  });
+  const [stage, setStage] = useState(() => initialData?.stage || 1);
+  const [highestUnlocked, setHighestUnlocked] = useState(() => initialData?.highestUnlocked || initialData?.stage || 1);
+  const [coins, setCoins] = useState(() => (initialData?.coins !== undefined ? initialData.coins : 0));
+  const [stars, setStars] = useState(() => (initialData?.stars !== undefined ? initialData.stars : 0));
   const [starBonusActive, setStarBonusActive] = useState(false);
-  const [soundEnabled, setSoundEnabled] = useState(true);
-  const [musicEnabled, setMusicEnabled] = useState(true);
-  const [vibrationEnabled, setVibrationEnabled] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(() => (initialData?.soundEnabled !== undefined ? initialData.soundEnabled : true));
+  const [musicEnabled, setMusicEnabled] = useState(() => (initialData?.musicEnabled !== undefined ? initialData.musicEnabled : true));
+  const [vibrationEnabled, setVibrationEnabled] = useState(() => (initialData?.vibrationEnabled !== undefined ? initialData.vibrationEnabled : true));
 
   // Generous chances formula: increases by 4 chances per stage
-  // Stage 1: 6 chances, Stage 2: 10 chances, Stage 3: 14 chances, Stage 4: 18 chances, etc.
   const getMaxChances = (stageNum) => {
     return Math.max(6, 6 + (stageNum - 1) * 4);
   };
   const maxChances = getMaxChances(stage);
   const [chances, setChances] = useState(() => getMaxChances(stage));
 
-  // Themes & Bottle Skins State with LocalStorage Persistence
-  const [activeTheme, setActiveTheme] = useState(() => {
-    return localStorage.getItem('watersort_active_theme') || 'apothecary';
-  });
-  const [unlockedThemes, setUnlockedThemes] = useState(() => {
-    const saved = localStorage.getItem('watersort_unlocked_themes');
-    return saved ? JSON.parse(saved) : ['apothecary', 'primary'];
-  });
+  // Themes & Bottle Skins State - Isolated Per Player Profile
+  const [activeTheme, setActiveTheme] = useState(() => initialData?.activeTheme || 'apothecary');
+  const [unlockedThemes, setUnlockedThemes] = useState(() => initialData?.unlockedThemes || ['apothecary']);
 
-  const [activeSkin, setActiveSkin] = useState(() => {
-    return localStorage.getItem('watersort_active_skin') || 'classic';
-  });
-  const [unlockedSkins, setUnlockedSkins] = useState(() => {
-    const saved = localStorage.getItem('watersort_unlocked_skins');
-    return saved ? JSON.parse(saved) : ['classic'];
-  });
+  const [activeSkin, setActiveSkin] = useState(() => initialData?.activeSkin || 'classic');
+  const [unlockedSkins, setUnlockedSkins] = useState(() => initialData?.unlockedSkins || ['classic']);
 
   const handlePurchaseTheme = (themeId, price) => {
     if (coins < price || unlockedThemes.includes(themeId)) return false;
     setCoins((c) => c - price);
-    setUnlockedThemes((prev) => {
-      const next = [...prev, themeId];
-      localStorage.setItem('watersort_unlocked_themes', JSON.stringify(next));
-      return next;
-    });
+    setUnlockedThemes((prev) => [...prev, themeId]);
     setActiveTheme(themeId);
-    localStorage.setItem('watersort_active_theme', themeId);
     gameAudio.playClick();
     return true;
   };
@@ -83,20 +60,14 @@ export default function App() {
   const handleEquipTheme = (themeId) => {
     if (!unlockedThemes.includes(themeId)) return;
     setActiveTheme(themeId);
-    localStorage.setItem('watersort_active_theme', themeId);
     gameAudio.playClick();
   };
 
   const handlePurchaseSkin = (skinId, price) => {
     if (coins < price || unlockedSkins.includes(skinId)) return false;
     setCoins((c) => c - price);
-    setUnlockedSkins((prev) => {
-      const next = [...prev, skinId];
-      localStorage.setItem('watersort_unlocked_skins', JSON.stringify(next));
-      return next;
-    });
+    setUnlockedSkins((prev) => [...prev, skinId]);
     setActiveSkin(skinId);
-    localStorage.setItem('watersort_active_skin', skinId);
     gameAudio.playClick();
     return true;
   };
@@ -104,7 +75,6 @@ export default function App() {
   const handleEquipSkin = (skinId) => {
     if (!unlockedSkins.includes(skinId)) return;
     setActiveSkin(skinId);
-    localStorage.setItem('watersort_active_skin', skinId);
     gameAudio.playClick();
   };
 
@@ -131,20 +101,93 @@ export default function App() {
     return b && b.length === 4 && b.every((c) => c === b[0]);
   };
 
-  // Sync stage to localStorage
+  // Auto-Save current player progress to their dedicated isolated account store
   useEffect(() => {
-    localStorage.setItem('watersort_stage', stage.toString());
-  }, [stage]);
+    if (!currentUser) return;
+    authService.saveUserProgress(currentUser.id, {
+      stage,
+      highestUnlocked,
+      coins,
+      stars,
+      activeTheme,
+      unlockedThemes,
+      activeSkin,
+      unlockedSkins,
+      soundEnabled,
+      musicEnabled,
+      vibrationEnabled,
+    });
+  }, [
+    currentUser,
+    stage,
+    highestUnlocked,
+    coins,
+    stars,
+    activeTheme,
+    unlockedThemes,
+    activeSkin,
+    unlockedSkins,
+    soundEnabled,
+    musicEnabled,
+    vibrationEnabled,
+  ]);
 
-  // Sync coins to localStorage
-  useEffect(() => {
-    localStorage.setItem('watersort_coins', coins.toString());
-  }, [coins]);
+  // Handle successful login or account registration
+  const handleLoginSuccess = (user, progress) => {
+    setCurrentUser(user);
+    setStage(progress.stage || 1);
+    setHighestUnlocked(progress.highestUnlocked || progress.stage || 1);
+    setCoins(progress.coins !== undefined ? progress.coins : 0);
+    setStars(progress.stars !== undefined ? progress.stars : 0);
+    setActiveTheme(progress.activeTheme || 'apothecary');
+    setUnlockedThemes(progress.unlockedThemes || ['apothecary']);
+    setActiveSkin(progress.activeSkin || 'classic');
+    setUnlockedSkins(progress.unlockedSkins || ['classic']);
+    setSoundEnabled(progress.soundEnabled !== undefined ? progress.soundEnabled : true);
+    setMusicEnabled(progress.musicEnabled !== undefined ? progress.musicEnabled : true);
+    setVibrationEnabled(progress.vibrationEnabled !== undefined ? progress.vibrationEnabled : true);
+    setScreen('home');
+    loadStage(progress.stage || 1);
+  };
 
-  // Sync stars to localStorage
-  useEffect(() => {
-    localStorage.setItem('watersort_stars', stars.toString());
-  }, [stars]);
+  // Handle logout
+  const handleLogout = () => {
+    authService.logout();
+    setCurrentUser(null);
+    setScreen('home');
+    setIsSettingsOpen(false);
+    setIsWinOpen(false);
+    setIsOutOfChancesOpen(false);
+    setIsPaused(false);
+    setIsShopOpen(false);
+    setIsLevelsOpen(false);
+    setIsAchievementsOpen(false);
+    setIsHowToPlayOpen(false);
+  };
+
+  // Reset Progress for current player account
+  const handleResetProgress = () => {
+    setStage(1);
+    setHighestUnlocked(1);
+    setStars(0);
+    setCoins(0);
+    loadStage(1);
+    if (currentUser) {
+      authService.saveUserProgress(currentUser.id, {
+        stage: 1,
+        highestUnlocked: 1,
+        stars: 0,
+        coins: 0,
+        activeTheme,
+        unlockedThemes,
+        activeSkin,
+        unlockedSkins,
+        soundEnabled,
+        musicEnabled,
+        vibrationEnabled,
+      });
+    }
+  };
 
   // Load stage bottles and assign starting chances
   const loadStage = useCallback((stageNum) => {
@@ -262,11 +305,7 @@ export default function App() {
     setStars((s) => s + 3); // Points added to the star icon!
     setCoins((c) => c + 50);
     setStarBonusActive(true);
-    setHighestUnlocked((prev) => {
-      const nextUnlocked = Math.max(prev, Math.min(100, stage + 1));
-      localStorage.setItem('watersort_highest_stage', nextUnlocked.toString());
-      return nextUnlocked;
-    });
+    setHighestUnlocked((prev) => Math.max(prev, Math.min(100, stage + 1)));
     setTimeout(() => setStarBonusActive(false), 3500);
   }, [stage]);
 
@@ -274,12 +313,7 @@ export default function App() {
   const handleNextStage = () => {
     const nextStage = stage >= 100 ? 1 : stage + 1;
     setStage(nextStage);
-    localStorage.setItem('watersort_stage', nextStage.toString());
-    setHighestUnlocked((prev) => {
-      const updated = Math.max(prev, nextStage);
-      localStorage.setItem('watersort_highest_stage', updated.toString());
-      return updated;
-    });
+    setHighestUnlocked((prev) => Math.max(prev, nextStage));
     loadStage(nextStage);
   };
 
@@ -296,6 +330,11 @@ export default function App() {
   const uniqueColors = new Set(bottles.flat()).size;
   const targetCompleted = Math.max(1, uniqueColors);
   const progressPercent = Math.min(100, Math.round((completedCount / targetCompleted) * 100));
+
+  // If not logged in, enforce the LoginScreen first before accessing the game
+  if (!currentUser) {
+    return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
+  }
 
   return (
     <div className="relative w-full h-[100dvh] overflow-hidden bg-black flex flex-col justify-between font-sans select-none pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)] pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)]">
@@ -427,7 +466,9 @@ export default function App() {
           currentStage={stage}
           totalStars={stars}
           starBonusActive={starBonusActive}
-          playerId="84920"
+          playerId={currentUser?.id ? currentUser.id.slice(4, 9).toUpperCase() : '84920'}
+          username={currentUser?.username || ''}
+          onLogout={handleLogout}
           soundEnabled={soundEnabled}
           onToggleSound={toggleSound}
           onOpenSettings={() => setIsSettingsOpen(true)}
@@ -687,7 +728,9 @@ export default function App() {
           onToggleMusic={() => setMusicEnabled(!musicEnabled)}
           vibrationEnabled={vibrationEnabled}
           onToggleVibration={() => setVibrationEnabled(!vibrationEnabled)}
-          onResetProgress={() => loadStage(1)}
+          onResetProgress={handleResetProgress}
+          currentUser={currentUser}
+          onLogout={handleLogout}
         />
 
         <ShopModal

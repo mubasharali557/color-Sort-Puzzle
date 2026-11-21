@@ -9,6 +9,7 @@ import {
   VolumeX,
   Star,
   Sparkles,
+  LogOut,
 } from 'lucide-react';
 import { gameAudio } from '../utils/gameAudio';
 import PlayerAvatar from './PlayerAvatar';
@@ -20,6 +21,8 @@ export default function GameNavbar({
   totalStars = 125,
   starBonusActive = false,
   playerId = '84920',
+  username = '',
+  onLogout,
   soundEnabled = true,
   onToggleSound,
   onOpenSettings,
@@ -176,14 +179,14 @@ export default function GameNavbar({
         {/* RIGHT: Player Profile ID, Stars Count & Sound Toggle */}
         <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
           {/* Player Profile with Realistic 3D Avatar */}
-          <div className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full bg-gradient-to-r from-slate-950/90 to-slate-900/90 border border-slate-700/60 shadow-inner">
+          <div className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full bg-gradient-to-r from-slate-950/90 to-slate-900/90 border border-slate-700/60 shadow-inner max-w-[110px] sm:max-w-[140px]">
             <PlayerAvatar size="sm" />
-            <div className="flex flex-col leading-none">
+            <div className="flex flex-col leading-none truncate">
               <span className="text-[7px] font-black uppercase text-amber-300 tracking-wider hidden sm:inline">
                 Player
               </span>
-              <span className="text-[10px] sm:text-xs font-black text-white tracking-tight">
-                #{playerId}
+              <span className="text-[10px] sm:text-xs font-black text-white tracking-tight truncate">
+                {username ? username : `#${playerId}`}
               </span>
             </div>
           </div>
@@ -228,6 +231,22 @@ export default function GameNavbar({
               <VolumeX className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             )}
           </button>
+
+          {/* Logout Button */}
+          {onLogout && (
+            <button
+              onClick={() => {
+                gameAudio.playClick();
+                if (window.confirm('Are you sure you want to log out?')) {
+                  onLogout();
+                }
+              }}
+              className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-slate-700/60 bg-slate-900/90 hover:bg-rose-950/80 hover:border-rose-500/60 text-slate-400 hover:text-rose-300 flex items-center justify-center transition-all active:scale-90 shadow-md cursor-pointer"
+              title="Log Out"
+            >
+              <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            </button>
+          )}
         </div>
       </div>
     </header>
